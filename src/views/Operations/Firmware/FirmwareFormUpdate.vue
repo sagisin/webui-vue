@@ -26,6 +26,20 @@
             :label="$t('pageFirmware.form.updateFirmware.imageFile')"
             label-for="image-file"
           >
+            <b-progress show-progress :max="max" class="mb-3">
+              <b-progress-bar variant="primary" :value="values[0]"
+                >Upload</b-progress-bar
+              >
+              <b-progress-bar variant="primary" :value="values[1]"
+                >Activation</b-progress-bar
+              >
+              <b-progress-bar variant="primary" :value="values[2]"
+                >Reboot</b-progress-bar
+              >
+              <b-progress-bar variant="primary" :value="values[3]"
+                >Completed</b-progress-bar
+              >
+            </b-progress>
             <form-file
               id="image-file"
               :disabled="isPageDisabled"
@@ -106,6 +120,8 @@ export default {
   },
   data() {
     return {
+      values: [],
+      max: 100,
       loading,
       isWorkstationSelected: true,
       file: null,
@@ -173,6 +189,7 @@ export default {
         } else {
           this.dispatchTftpUpload(activateFirmware);
         }
+        this.values = [25];
       };
 
       // Step 2 - Activation
@@ -218,6 +235,7 @@ export default {
             // because of BMC starting reboot
             if (res[0].PercentComplete == 100 || res[0].error) {
               bmcReboot();
+              this.values = [25, 25];
             } else {
               setTimeout(() => {
                 currentTaskProgress(checkCounter, data);
@@ -258,13 +276,18 @@ export default {
               .then(() => {
                 if (this.bmcPowerState === 'On') {
                   activationComplete();
+                  this.values = [25, 25, 25];
                 } else {
                   rebootProgress();
                 }
               })
               .catch(({ message }) => {
                 this.endLoader();
-                this.errorToast(message);
+                const errorMessage =
+                  message === 'ExpiredAccessKey'
+                    ? this.$t('pageFirmware.toast.expiredAccessKeyError')
+                    : message;
+                this.errorToast(errorMessage);
               });
           }, 180000); // 3 minutes
         };
@@ -274,6 +297,7 @@ export default {
       // Step 4 - Activation complete
       const activationComplete = () => {
         this.endLoader();
+        this.values = [25, 25, 25, 25];
         return this.infoToast(
           this.$t('pageFirmware.toast.updateFirmware.step4Message'),
           {
